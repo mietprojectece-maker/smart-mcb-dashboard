@@ -3,14 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Industrial Microgrid & MCB Monitor</title>
+  <title>Smart Industrial Microgrid & Circuit Protection Dashboard</title>
+  
+  <!-- Modern Fonts & Chart.js -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
   <style>
     :root {
-      --bg-dark: #080c14;
-      --card-bg: #0f172a;
-      --card-border: #1e293b;
+      --bg-dark: #070a12;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-hover: rgba(56, 189, 248, 0.25);
       --text-main: #f8fafc;
       --text-muted: #64748b;
       --accent-blue: #38bdf8;
@@ -18,6 +24,7 @@
       --accent-red: #ef4444;
       --accent-yellow: #f59e0b;
       --accent-purple: #8b5cf6;
+      --accent-cyan: #06b6d4;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,11 +32,15 @@
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
       background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.05) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.05) 0px, transparent 50%);
       color: var(--text-main);
       padding: 24px;
       min-height: 100vh;
     }
 
+    /* Top Navigation Header */
     header {
       display: flex;
       justify-content: space-between;
@@ -39,28 +50,54 @@
       border-bottom: 1px solid var(--card-border);
     }
 
-    header h1 {
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
+    .header-title {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
+    }
+
+    .header-icon {
+      width: 36px;
+      height: 36px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-main);
     }
 
     .status-badge {
-      background: rgba(30, 41, 59, 0.6);
+      background: rgba(15, 23, 42, 0.9);
       padding: 8px 16px;
       border-radius: 99px;
       font-size: 13px;
       font-weight: 600;
       color: var(--accent-blue);
       border: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
       backdrop-filter: blur(10px);
-      transition: all 0.3s ease;
     }
 
-    /* Modern Layout Grid */
+    .status-ping {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 10px var(--accent-green);
+    }
+
+    /* Dashboard Main Grid Layout */
     .dashboard-grid {
       display: grid;
       grid-template-columns: 320px 340px 1fr;
@@ -68,13 +105,19 @@
       gap: 20px;
     }
 
+    /* Glassmorphism Cards */
     .card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 16px;
       padding: 20px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-      position: relative;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+      transition: border-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: var(--card-border-hover);
     }
 
     .card-title {
@@ -89,13 +132,20 @@
       align-items: center;
     }
 
-    /* Big Stat Display Boxes */
+    /* Sub Stat Boxes */
     .stat-box {
-      background: rgba(15, 23, 42, 0.8);
-      border: 1px solid #1e293b;
+      background: rgba(7, 10, 18, 0.6);
+      border: 1px solid var(--card-border);
       border-radius: 12px;
       padding: 14px;
       margin-bottom: 12px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 4px;
     }
 
     .stat-display {
@@ -106,22 +156,24 @@
 
     .status-online { color: var(--accent-green); }
     .status-warning { color: var(--accent-yellow); }
-    
+
+    /* Alert Pulse Animation for MCB Tripped state */
     .status-alert-box {
-      border-color: rgba(239, 68, 68, 0.4);
-      background: rgba(239, 68, 68, 0.05);
+      border-color: rgba(239, 68, 68, 0.5) !important;
+      background: rgba(239, 68, 68, 0.08) !important;
     }
+
     .status-alert-text {
-      color: var(--accent-red);
-      animation: pulse 1.8s infinite;
+      color: var(--accent-red) !important;
+      animation: alertPulse 1.5s infinite;
     }
 
-    @keyframes pulse {
+    @keyframes alertPulse {
       0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+      50% { opacity: 0.4; }
     }
 
-    /* Hardware LED Indicator Row Styling */
+    /* Hardware LED Rows */
     .led-container {
       display: flex;
       flex-direction: column;
@@ -132,10 +184,10 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #090d16;
+      background: rgba(7, 10, 18, 0.5);
       padding: 10px 14px;
       border-radius: 10px;
-      border: 1px solid #1e293b;
+      border: 1px solid var(--card-border);
       font-size: 13px;
       font-weight: 600;
     }
@@ -158,10 +210,10 @@
       box-shadow: 0 0 12px var(--accent-red);
     }
 
-    /* Gauge styling */
+    /* Circular Gauge Container */
     .gauge-container {
       position: relative;
-      height: 160px;
+      height: 150px;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -169,14 +221,14 @@
 
     .gauge-value {
       position: absolute;
-      bottom: 15px;
+      bottom: 10px;
       font-size: 32px;
       font-weight: 800;
       color: var(--text-main);
       letter-spacing: -1px;
     }
 
-    /* Control Panel styling */
+    /* Interactive Control Panel Section */
     .control-panel {
       grid-column: 1 / span 2;
     }
@@ -189,7 +241,7 @@
 
     button {
       flex: 1;
-      padding: 12px;
+      padding: 12px 16px;
       border: none;
       border-radius: 10px;
       font-family: inherit;
@@ -197,12 +249,19 @@
       font-weight: 700;
       cursor: pointer;
       transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
 
     button:active { transform: scale(0.98); }
     .btn-green { background: #059669; color: white; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3); }
+    .btn-green:hover { background: #10b981; }
     .btn-red { background: #dc2626; color: white; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3); }
+    .btn-red:hover { background: #ef4444; }
 
+    /* Custom Slider Styles */
     .slider-group {
       margin-bottom: 14px;
     }
@@ -223,24 +282,26 @@
       background: #1e293b;
       outline: none;
       accent-color: var(--accent-blue);
+      cursor: pointer;
     }
 
+    /* Terminal Command Log */
     .terminal-log {
-      background: #050811;
-      border-radius: 8px;
+      background: rgba(5, 8, 17, 0.9);
+      border-radius: 10px;
       padding: 10px 14px;
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
-      color: var(--accent-blue);
+      color: var(--accent-cyan);
       height: 75px;
       overflow-y: auto;
-      border: 1px solid #1e293b;
+      border: 1px solid var(--card-border);
       margin-top: 10px;
     }
 
-    /* Graphs */
+    /* Responsive Graph Heights */
     .graph-card {
-      height: 340px;
+      height: 335px;
     }
 
     .full-width-graph {
@@ -251,23 +312,31 @@
 </head>
 <body>
 
+  <!-- TOP HEADER BAR -->
   <header>
-    <h1>⚡ Smart Microgrid & Circuit Breaker Controller</h1>
-    <div class="status-badge" id="gateway-status">Gateway Status: Connecting...</div>
+    <div class="header-title">
+      <div class="header-icon">⚡</div>
+      <h1>Smart Microgrid & Circuit Breaker Controller</h1>
+    </div>
+    <div class="status-badge" id="gateway-status">
+      <div class="status-ping" id="status-ping-dot"></div>
+      <span id="status-text">Connecting to Hardware...</span>
+    </div>
   </header>
 
+  <!-- MAIN DASHBOARD GRID -->
   <div class="dashboard-grid">
     
-    <!-- COLUMN 1: MAINS & LED STATUS -->
+    <!-- CARD 1: GRID STATUS & LED LOAD INDICATORS -->
     <div class="card">
       <div class="card-title">Grid & Load Distribution</div>
       
       <div class="stat-box">
-        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">MAINS GRID STATUS</div>
+        <div class="stat-label">MAINS GRID STATUS</div>
         <div class="stat-display status-online" id="stat-grid">GRID ONLINE</div>
       </div>
 
-      <div class="card-title" style="margin-top: 15px;">Hardware LED Status</div>
+      <div class="card-title" style="margin-top: 15px;">Hardware LED Indicators</div>
       <div class="led-container">
         <div class="led-row">
           <span>Essential Load (LED 1)</span>
@@ -278,15 +347,15 @@
           <div class="led-dot active-green" id="led2"></div>
         </div>
         <div class="led-row">
-          <span>Non-Essential (LED 3)</span>
+          <span>Non-Essential Load (LED 3)</span>
           <div class="led-dot active-green" id="led3"></div>
         </div>
       </div>
     </div>
 
-    <!-- COLUMN 2: VOLTAGE GAUGE & MCB ALERT -->
+    <!-- CARD 2: SYSTEM VOLTAGE GAUGE & MCB ALERT -->
     <div class="card">
-      <div class="card-title">Telemetry & Circuit Protection</div>
+      <div class="card-title">Circuit Telemetry & Protection</div>
       
       <div class="gauge-container">
         <canvas id="gaugeVoltage"></canvas>
@@ -294,31 +363,31 @@
       </div>
 
       <div class="stat-box" id="mcb-box" style="margin-top: 10px;">
-        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">MCB OPERATIONAL STATE</div>
+        <div class="stat-label">MCB OPERATIONAL STATE</div>
         <div class="stat-display status-online" id="stat-mcb">NORMAL</div>
       </div>
     </div>
 
-    <!-- COLUMN 3: LIVE VOLTAGE & CURRENT WAVEFORMS -->
+    <!-- CARD 3: REAL-TIME WAVEFORMS (VOLTAGE & CURRENT) -->
     <div class="card graph-card">
-      <div class="card-title">Real-Time Electrical Waveforms</div>
-      <div style="position: relative; height: 270px;">
+      <div class="card-title">Live Voltage & Current Waveforms</div>
+      <div style="position: relative; height: 265px;">
         <canvas id="chartWaveform"></canvas>
       </div>
     </div>
 
-    <!-- ROW 2 COLUMN 1 & 2: CONTROL PANEL -->
+    <!-- CARD 4: INTERACTIVE CONTROL PANEL (GRID BUTTONS & SLIDERS) -->
     <div class="card control-panel">
       <div class="card-title">System Controls & Variable Tuning</div>
       
       <div class="btn-group">
-        <button class="btn-green" onclick="setGridState(true)">🟢 RESET GRID / MAINS ON</button>
-        <button class="btn-red" onclick="setGridState(false)">🔴 TRIP GRID (SIMULATE OUTAGE)</button>
+        <button class="btn-green" onclick="setGridState(true)">🟢 MAINS ON (RESTORE GRID)</button>
+        <button class="btn-red" onclick="setGridState(false)">🔴 MAINS OFF (TRIP MAINS GRID)</button>
       </div>
 
       <div class="slider-group">
         <label>
-          <span>Solar Power Generation:</span>
+          <span>Simulated Solar Power Generation:</span>
           <span id="lbl-solar" style="color: var(--accent-yellow);">2500 W</span>
         </label>
         <input type="range" id="rng-solar" min="0" max="5000" step="100" value="2500" oninput="updateSliders()">
@@ -326,20 +395,20 @@
 
       <div class="slider-group">
         <label>
-          <span>Total System Demand:</span>
+          <span>Total Load Demand:</span>
           <span id="lbl-load" style="color: var(--accent-red);">3800 W</span>
         </label>
         <input type="range" id="rng-load" min="500" max="6000" step="100" value="3800" oninput="updateSliders()">
       </div>
 
       <div class="terminal-log" id="terminal-out">
-        [SYSTEM STARTUP] Awaiting target responses...<br>
+        [SYSTEM STARTUP] Initializing dashboard gateway interface...<br>
       </div>
     </div>
 
-    <!-- ROW 2 COLUMN 3: LOAD CONSUMPTION BREAKDOWN -->
+    <!-- CARD 5: POWER BALANCE & SOLAR VS LOAD GRAPH -->
     <div class="card full-width-graph">
-      <div class="card-title">Power Balance & Solar vs Load Trend</div>
+      <div class="card-title">Power Balance (Solar vs Active Demand)</div>
       <div style="position: relative; height: 250px;">
         <canvas id="chartLoad"></canvas>
       </div>
@@ -348,37 +417,38 @@
   </div>
 
   <script>
-    const ARDUINO_IP = "http://192.168.29.157"; // Update to your Arduino's IP
+    // --- Arduino UNO R4 WiFi Local IP Endpoint ---
+    const ARDUINO_IP = "http://192.168.29.157"; 
 
-    // --- Chart 1: Waveform ---
+    // 1. Chart 1: Waveform (Voltage & Current Lines)
     const ctxWaveform = document.getElementById('chartWaveform').getContext('2d');
     const chartWaveform = new Chart(ctxWaveform, {
       type: 'line',
       data: {
         labels: [],
         datasets: [
-          { label: 'Voltage (V)', data: [], borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', tension: 0.4, borderWidth: 2, fill: true },
+          { label: 'Voltage (V)', data: [], borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.08)', tension: 0.4, borderWidth: 2, fill: true },
           { label: 'Current (A)', data: [], borderColor: '#38bdf8', tension: 0.4, borderWidth: 2 }
         ]
       },
-      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: '#1e293b' } }, x: { grid: { color: '#1e293b' } } } }
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { color: 'rgba(255,255,255,0.05)' } } } }
     });
 
-    // --- Chart 2: Load Breakdown ---
+    // 2. Chart 2: Load Breakdown (Solar Generation vs Total Load)
     const ctxLoad = document.getElementById('chartLoad').getContext('2d');
     const chartLoad = new Chart(ctxLoad, {
       type: 'line',
       data: {
         labels: [],
         datasets: [
-          { label: 'Solar Output (W)', data: [], borderColor: '#f59e0b', borderWidth: 2, tension: 0.2 },
-          { label: 'Active Load (W)', data: [], borderColor: '#ef4444', borderWidth: 2, tension: 0.2 }
+          { label: 'Solar Output (W)', data: [], borderColor: '#f59e0b', borderWidth: 2, tension: 0.3 },
+          { label: 'Active Total Load (W)', data: [], borderColor: '#ef4444', borderWidth: 2, tension: 0.3 }
         ]
       },
-      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: '#1e293b' } }, x: { grid: { color: '#1e293b' } } } }
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { color: 'rgba(255,255,255,0.05)' } } } }
     });
 
-    // --- Chart 3: Voltage Gauge ---
+    // 3. Chart 3: Voltage Half-Arc Gauge
     const ctxGauge = document.getElementById('gaugeVoltage').getContext('2d');
     const chartGauge = new Chart(ctxGauge, {
       type: 'doughnut',
@@ -392,19 +462,22 @@
       options: { rotation: -90, circumference: 180, cutout: '82%', responsive: true, maintainAspectRatio: false }
     });
 
+    // Logging terminal helper
     function logTerminal(msg) {
       const term = document.getElementById('terminal-out');
       term.innerHTML += `[${new Date().toLocaleTimeString()}] ${msg}<br>`;
       term.scrollTop = term.scrollHeight;
     }
 
+    // Grid ON/OFF Control Trigger
     function setGridState(state) {
       const endpoint = state ? '/grid/on' : '/grid/off';
       fetch(ARDUINO_IP + endpoint)
-        .then(() => logTerminal(`Command Sent: ${state ? 'GRID_ON' : 'GRID_OFF'}`))
-        .catch(err => logTerminal(`Connection Failure: ${err}`));
+        .then(() => logTerminal(`Command Dispatched: ${state ? 'MAINS_RESTORE_ON' : 'MAINS_TRIP_OFF'}`))
+        .catch(err => logTerminal(`Command Transmission Error: ${err}`));
     }
 
+    // Slider Event Handler
     function updateSliders() {
       const solar = document.getElementById('rng-solar').value;
       const load = document.getElementById('rng-load').value;
@@ -412,18 +485,20 @@
       document.getElementById('lbl-load').innerText = load + ' W';
 
       fetch(`${ARDUINO_IP}/set?solar=${solar}&load=${load}`)
-        .then(() => logTerminal(`Sliders Updated: Solar=${solar}W | Load=${load}W`))
+        .then(() => logTerminal(`Params Synchronized: Solar=${solar}W | Demand=${load}W`))
         .catch(err => console.log(err));
     }
 
+    // Main Telemetry Fetch Loop
     function fetchTelemetry() {
       fetch(ARDUINO_IP + '/data')
         .then(res => res.json())
         .then(data => {
-          document.getElementById('gateway-status').innerText = 'Gateway Status: Connected ✅';
-          document.getElementById('gateway-status').style.borderColor = '#10b981';
+          // Update Gateway Status Badge
+          document.getElementById('status-text').innerText = 'Gateway Online';
+          document.getElementById('status-ping-dot').style.background = '#10b981';
 
-          // Grid Status Badge
+          // Update Grid Status Badge
           const gridEl = document.getElementById('stat-grid');
           if (data.grid_status) {
             gridEl.innerText = 'GRID ONLINE';
@@ -433,7 +508,7 @@
             gridEl.className = 'stat-display status-warning';
           }
 
-          // MCB Alert Box & Text
+          // Update MCB Trip Status Badge
           const mcbEl = document.getElementById('stat-mcb');
           const mcbBox = document.getElementById('mcb-box');
           if (data.mcb_tripped) {
@@ -446,7 +521,7 @@
             mcbBox.className = 'stat-box';
           }
 
-          // LEDs
+          // Update Hardware LED Indicators
           const isL1 = (data.led_essential == 1 || data.led_essential === true);
           const isL2 = (data.led_medium == 1 || data.led_medium === true);
           const isL3 = (data.led_non_essential == 1 || data.led_non_essential === true);
@@ -455,12 +530,12 @@
           document.getElementById('led2').className = isL2 ? 'led-dot active-green' : 'led-dot active-red';
           document.getElementById('led3').className = isL3 ? 'led-dot active-green' : 'led-dot active-red';
 
-          // Gauge
+          // Update Arc Gauge Text & Data
           document.getElementById('val-voltage').innerText = data.voltage + ' V';
           chartGauge.data.datasets[0].data = [data.voltage, Math.max(0, 300 - data.voltage)];
           chartGauge.update();
 
-          // Graphs
+          // Update Time-Series Charts
           const now = new Date().toLocaleTimeString();
           if (chartWaveform.data.labels.length > 12) {
             chartWaveform.data.labels.shift();
@@ -483,11 +558,12 @@
           chartLoad.update();
         })
         .catch(err => {
-          document.getElementById('gateway-status').innerText = 'Gateway Status: Offline ❌';
-          document.getElementById('gateway-status').style.borderColor = '#ef4444';
+          document.getElementById('status-text').innerText = 'Gateway Offline';
+          document.getElementById('status-ping-dot').style.background = '#ef4444';
         });
     }
 
+    // Refresh telemetry every 1.5s
     setInterval(fetchTelemetry, 1500);
   </script>
 </body>
