@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Industrial Electrical Monitoring & Control System</title>
+  <!-- Chart.js for smooth time-series graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --card-bg: #151c2c;
+      --card-border: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-blue: #38bdf8;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+      --accent-yellow: #eab308;
+      --accent-purple: #a855f7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      padding: 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    header h1 { font-size: 20px; color: var(--text-main); font-weight: 600; }
+    .status-badge {
+      background: #1e293b;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      color: var(--accent-blue);
+      border: 1px solid #334155;
+    }
+
+    /* Main Grid Layout matching Reference UI */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 280px 320px 1fr;
+      grid-template-rows: auto auto 1fr;
+      gap: 15px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 18px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 12px;
+    }
+
+    /* Big Stat Display Boxes */
+    .stat-display {
+      font-size: 26px;
+      font-weight: 800;
+      padding: 12px 0;
+    }
+
+    .status-online { color: var(--accent-green); }
+    .status-alert { color: var(--accent-red); }
+    .status-warning { color: var(--accent-yellow); }
+
+    /* Custom Gauge Styling */
+    .gauge-container {
+      position: relative;
+      height: 140px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .gauge-value {
+      position: absolute;
+      bottom: 10px;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Terminal & Controls Section */
+    .control-panel {
+      grid-column: 1 / span 2;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    button:hover { opacity: 0.9; }
+    .btn-green { background: var(--accent-green); color: white; }
+    .btn-red { background: var(--accent-red); color: white; }
+
+    .slider-group {
+      margin-bottom: 12px;
+    }
+
+    .slider-group label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    input[type=range] {
+      width: 100%;
+      accent-color: var(--accent-blue);
+    }
+
+    .terminal-log {
+      background: #090d16;
+      border-radius: 6px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--accent-blue);
+      height: 80px;
+      overflow-y: auto;
+      border: 1px solid #1e293b;
+    }
+
+    /* Graph Section */
+    .graph-card {
+      grid-column: 3;
+      height: 280px;
+    }
+
+    .full-width-graph {
+      grid-column: 1 / span 3;
+      height: 260px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>⚡ Smart Industrial Microgrid & MCB Monitor</h1>
+    <div class="status-badge" id="gateway-status">Gateway Status: Connecting...</div>
+  </header>
+
+  <div class="dashboard-grid">
+    
+    <!-- LEFT COLUMN: STAT CARDS -->
+    <div class="card">
+      <div class="card-title">Mains Grid Status</div>
+      <div class="stat-display status-online" id="stat-grid">GRID ONLINE</div>
+    </div>
+
+    <!-- CENTER COLUMN: ARC GAUGES -->
+    <div class="card" style="grid-row: 1 / span 2;">
+      <div class="card-title">System Voltage (V)</div>
+      <div class="gauge-container">
+        <canvas id="gaugeVoltage"></canvas>
+        <div class="gauge-value" id="val-voltage">0 V</div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: WAVEFORM LINE GRAPH -->
+    <div class="card graph-card" style="grid-row: 1 / span 2;">
+      <div class="card-title">Live Voltage & Current Waveforms</div>
+      <canvas id="chartWaveform"></canvas>
+    </div>
+
+    <!-- LEFT COLUMN STEP 2: MCB STATUS -->
+    <div class="card">
+      <div class="card-title">MCB Trip Status</div>
+      <div class="stat-display status-online" id="stat-mcb">NORMAL</div>
+    </div>
+
+    <!-- CONTROL TERMINAL (MATCHES SESSION REPORT PANEL) -->
+    <div class="card control-panel">
+      <div class="card-title">Power Grid Controls & Parameter Tuning</div>
+      
+      <div class="btn-group">
+        <button class="btn-green" onclick="setGridState(true)">🟢 POWER GRID ON</button>
+        <button class="btn-red" onclick="setGridState(false)">🔴 POWER GRID OFF (TRIP MAINS)</button>
+      </div>
+
+      <div class="slider-group">
+        <label>
+          <span>Solar Power Output Generation:</span>
+          <span id="lbl-solar" style="color: var(--accent-yellow); font-weight: bold;">2500 W</span>
+        </label>
+        <input type="range" id="rng-solar" min="0" max="5000" step="100" value="2500" oninput="updateSliders()">
+      </div>
+
+      <div class="slider-group">
+        <label>
+          <span>Total Load Demand:</span>
+          <span id="lbl-load" style="color: var(--accent-red); font-weight: bold;">3800 W</span>
+        </label>
+        <input type="range" id="rng-load" min="500" max="6000" step="100" value="3800" oninput="updateSliders()">
+      </div>
+
+      <div class="terminal-log" id="terminal-out">
+        [SYSTEM INITIALIZED] Connecting to Arduino UNO R4 WiFi at http://192.168.29.157...<br>
+      </div>
+    </div>
+
+    <!-- BOTTOM FULL GRAPH: LOAD BREAKDOWN -->
+    <div class="card full-width-graph">
+      <div class="card-title">Load Consumption Breakdown & Solar Balance</div>
+      <canvas id="chartLoad"></canvas>
+    </div>
+
+  </div>
+
+  <script>
+    const ARDUINO_IP = "http://192.168.29.157"; // Update to your Arduino's IP address
+
+    // --- Chart 1: Waveform (Voltage & Current) ---
+    const ctxWaveform = document.getElementById('chartWaveform').getContext('2d');
+    const chartWaveform = new Chart(ctxWaveform, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          { label: 'Voltage (V)', data: [], borderColor: '#a855f7', tension: 0.4, borderWidth: 2 },
+          { label: 'Current (A)', data: [], borderColor: '#38bdf8', tension: 0.4, borderWidth: 2 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+    });
+
+    // --- Chart 2: Load Breakdown ---
+    const ctxLoad = document.getElementById('chartLoad').getContext('2d');
+    const chartLoad = new Chart(ctxLoad, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          { label: 'Solar Output (W)', data: [], borderColor: '#eab308', borderWidth: 2, fill: false },
+          { label: 'Active Load (W)', data: [], borderColor: '#ef4444', borderWidth: 2, fill: false }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // --- Chart 3: Voltage Arc Gauge ---
+    const ctxGauge = document.getElementById('gaugeVoltage').getContext('2d');
+    const chartGauge = new Chart(ctxGauge, {
+      type: 'doughnut',
+      data: {
+        datasets: [{
+          data: [230, 70],
+          backgroundColor: ['#22c55e', '#1e293b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        rotation: -90,
+        circumference: 180,
+        cutout: '80%',
+        responsive: true,
+        maintainAspectRatio: false
+      }
+    });
+
+    // --- Interactive Control Functions ---
+    function logTerminal(msg) {
+      const term = document.getElementById('terminal-out');
+      term.innerHTML += `[${new Date().toLocaleTimeString()}] ${msg}<br>`;
+      term.scrollTop = term.scrollHeight;
+    }
+
+    function setGridState(state) {
+      const endpoint = state ? '/grid/on' : '/grid/off';
+      fetch(ARDUINO_IP + endpoint)
+        .then(() => logTerminal(`Grid State Command Sent: ${state ? 'MAINS_ON' : 'MAINS_OFF'}`))
+        .catch(err => logTerminal(`Error triggering grid state: ${err}`));
+    }
+
+    function updateSliders() {
+      const solar = document.getElementById('rng-solar').value;
+      const load = document.getElementById('rng-load').value;
+      document.getElementById('lbl-solar').innerText = solar + ' W';
+      document.getElementById('lbl-load').innerText = load + ' W';
+
+      fetch(`${ARDUINO_IP}/set?solar=${solar}&load=${load}`)
+        .then(() => logTerminal(`Telemetry Set: Solar=${solar}W, Load=${load}W`))
+        .catch(err => console.log(err));
+    }
+
+    // --- Real-Time Data Fetching Loop ---
+    function fetchTelemetry() {
+      fetch(ARDUINO_IP + '/data')
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('gateway-status').innerText = 'Gateway Status: Connected ✅';
+          document.getElementById('gateway-status').style.borderColor = '#22c55e';
+
+          // Update Grid Status Badge
+          const gridEl = document.getElementById('stat-grid');
+          if (data.grid_status) {
+            gridEl.innerText = 'GRID ONLINE';
+            gridEl.className = 'stat-display status-online';
+          } else {
+            gridEl.innerText = 'GRID OUTAGE';
+            gridEl.className = 'stat-display status-warning';
+          }
+
+          // Update MCB Trip Badge
+          const mcbEl = document.getElementById('stat-mcb');
+          if (data.mcb_tripped) {
+            mcbEl.innerText = 'ALERT / TRIPPED';
+            mcbEl.className = 'stat-display status-alert';
+          } else {
+            mcbEl.innerText = 'NORMAL';
+            mcbEl.className = 'stat-display status-online';
+          }
+
+          // Update Gauge Text & Chart
+          document.getElementById('val-voltage').innerText = data.voltage + ' V';
+          chartGauge.data.datasets[0].data = [data.voltage, 300 - data.voltage];
+          chartGauge.update();
+
+          // Update Waveform Charts
+          const now = new Date().toLocaleTimeString();
+          if (chartWaveform.data.labels.length > 12) {
+            chartWaveform.data.labels.shift();
+            chartWaveform.data.datasets[0].data.shift();
+            chartWaveform.data.datasets[1].data.shift();
+            
+            chartLoad.data.labels.shift();
+            chartLoad.data.datasets[0].data.shift();
+            chartLoad.data.datasets[1].data.shift();
+          }
+
+          chartWaveform.data.labels.push(now);
+          chartWaveform.data.datasets[0].data.push(data.voltage);
+          chartWaveform.data.datasets[1].data.push(data.current);
+          chartWaveform.update();
+
+          chartLoad.data.labels.push(now);
+          chartLoad.data.datasets[0].data.push(data.solar_gen);
+          chartLoad.data.datasets[1].data.push(data.active_load);
+          chartLoad.update();
+        })
+        .catch(err => {
+          document.getElementById('gateway-status').innerText = 'Gateway Status: Disconnected ❌';
+          document.getElementById('gateway-status').style.borderColor = '#ef4444';
+        });
+    }
+
+    // Run fetch telemetry every 1.5 seconds
+    setInterval(fetchTelemetry, 1500);
+  </script>
+</body>
+</html>
