@@ -388,10 +388,10 @@
 
       <div class="slider-group">
         <label>
-          <span>Simulated Solar Power Generation:</span>
-          <span id="lbl-solar" style="color: var(--accent-yellow);">2500 W</span>
+          <span>Simulated Backup Power Generation:</span>
+          <span id="lbl-Backup" style="color: var(--accent-yellow);">2500 W</span>
         </label>
-        <input type="range" id="rng-solar" min="0" max="5000" step="100" value="2500" oninput="updateSliders()">
+        <input type="range" id="rng-Backup" min="0" max="5000" step="100" value="2500" oninput="updateSliders()">
       </div>
 
       <div class="slider-group">
@@ -407,9 +407,9 @@
       </div>
     </div>
 
-    <!-- CARD 5: POWER BALANCE & SOLAR VS LOAD GRAPH -->
+    <!-- CARD 5: POWER BALANCE & Backup VS LOAD GRAPH -->
     <div class="card full-width-graph">
-      <div class="card-title">Power Balance (Solar vs Active Demand)</div>
+      <div class="card-title">Power Balance (Backup vs Active Demand)</div>
       <div style="position: relative; height: 250px;">
         <canvas id="chartLoad"></canvas>
       </div>
@@ -435,14 +435,14 @@
       options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { color: 'rgba(255,255,255,0.05)' } } } }
     });
 
-    // 2. Chart 2: Load Breakdown (Solar Generation vs Total Load)
+    // 2. Chart 2: Load Breakdown (Backup Generation vs Total Load)
     const ctxLoad = document.getElementById('chartLoad').getContext('2d');
     const chartLoad = new Chart(ctxLoad, {
       type: 'line',
       data: {
         labels: [],
         datasets: [
-          { label: 'Solar Output (W)', data: [], borderColor: '#f59e0b', borderWidth: 2, tension: 0.3 },
+          { label: 'Backup Output (W)', data: [], borderColor: '#f59e0b', borderWidth: 2, tension: 0.3 },
           { label: 'Active Total Load (W)', data: [], borderColor: '#ef4444', borderWidth: 2, tension: 0.3 }
         ]
       },
@@ -480,13 +480,13 @@
 
     // Slider Event Handler
     function updateSliders() {
-      const solar = document.getElementById('rng-solar').value;
+      const Backup = document.getElementById('rng-Backup').value;
       const load = document.getElementById('rng-load').value;
-      document.getElementById('lbl-solar').innerText = solar + ' W';
+      document.getElementById('lbl-Backup').innerText = Backup + ' W';
       document.getElementById('lbl-load').innerText = load + ' W';
 
-      fetch(`${ARDUINO_IP}/set?solar=${solar}&load=${load}`)
-        .then(() => logTerminal(`Params Synchronized: Solar=${solar}W | Demand=${load}W`))
+      fetch(`${ARDUINO_IP}/set?Backup=${Backup}&load=${load}`)
+        .then(() => logTerminal(`Params Synchronized: Backup=${Backup}W | Demand=${load}W`))
         .catch(err => console.log(err));
     }
 
@@ -554,7 +554,7 @@
           chartWaveform.update();
 
           chartLoad.data.labels.push(now);
-          chartLoad.data.datasets[0].data.push(data.solar_gen);
+          chartLoad.data.datasets[0].data.push(data.Backup_gen);
           chartLoad.data.datasets[1].data.push(data.total_active_load || data.active_load || 0);
           chartLoad.update();
         })
